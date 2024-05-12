@@ -66,8 +66,10 @@ class BPEVocabulary:
         return mask
 
     def get_look_ahead_mask(self, token_indices):
-        # The look ahead mask is a square shaped matrix, which indicates
-        # whether a given word should attend to every other given word.
+        # The look ahead mask is a square shaped matrix, which is used to prevent a
+        # given model from attending to future words.
+        # The mask itself indicates whether a given word should attend to every
+        # other given word.
         # It contains a row for each word and an entry in each column to
         # indicate if the row word should attend to the word
         # where token_indices = (context_length x embedding_dim)
