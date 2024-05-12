@@ -63,8 +63,8 @@ class BPETokenizer:
 
         if debug:
             print("Base vocabulary size: ", len(vocabulary))
-            print("Before vocabulary -> ", vocabulary)
-            print("Before: Word Lookup table -> ", word_lookup_table)
+            print("Before vocabulary: ", vocabulary)
+            print("Before: Word Lookup table: ", word_lookup_table)
 
         # Learn merge rules across the corpus
         self.learn_merge_rules(vocabulary_size)
@@ -78,8 +78,8 @@ class BPETokenizer:
 
         if debug:
             print("After vocabulary size: ", len(vocabulary))
-            print("After vocabulary -> ", vocabulary)
-            print("After: Word Lookup table -> ", word_lookup_table)
+            print("After vocabulary: ", vocabulary)
+            print("After: Word Lookup table: ", word_lookup_table)
             print("Merges: ", self.merges)
             print("Token Indices: ", self.token_indices)
 
