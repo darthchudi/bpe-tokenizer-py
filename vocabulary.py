@@ -56,7 +56,7 @@ class BPEVocabulary:
 
     def get_padding_mask(self, token_indices):
         pad_token_index = self.data[TOKEN_PAD]
-        mask = (token_indices != pad_token_index)
+        mask = token_indices != pad_token_index
 
         # Cast the mask to the device and expected type
         mask = mask.to(device=self.device, dtype=torch.int64)

@@ -5,8 +5,10 @@ from util import SYMBOL_END_OF_WORD, TOKEN_UNKNOWN, special_tokens
 
 # BPETokenizer implements the byte-pair encoding algorithm and adapts it
 # for use as a tokenizer
-class BPETokenizer():
-    def __init__(self, corpus, vocabulary_size, handle_unknown_characters=False, debug=False):
+class BPETokenizer:
+    def __init__(
+        self, corpus, vocabulary_size, handle_unknown_characters=False, debug=False
+    ):
         # Split the corpus into words
         words = corpus.split()
 
@@ -102,7 +104,9 @@ class BPETokenizer():
         while len(self.vocabulary) < vocabulary_size:
             # Get the most frequent pair in the corpus
             corpus_pair_stats = self.get_corpus_pair_stats()
-            max_pair_in_corpus, max_pair_in_corpus_frequency = self.get_most_frequent_pair_in_corpus(corpus_pair_stats)
+            max_pair_in_corpus, max_pair_in_corpus_frequency = (
+                self.get_most_frequent_pair_in_corpus(corpus_pair_stats)
+            )
 
             # No more token pairs to be merged as we've exhausted all possible merge
             # rules in the corpus, so we stop training
@@ -133,9 +137,13 @@ class BPETokenizer():
                     # Replace the bytes with the byte-pair token
                     word_bytes_start_chunk = word_bytes[:i]
                     word_bytes_replacement_chunk = [max_pair_in_corpus_str]
-                    word_bytes_end_chunk = word_bytes[i + 2:]
+                    word_bytes_end_chunk = word_bytes[i + 2 :]
 
-                    updated_word_bytes = word_bytes_start_chunk + word_bytes_replacement_chunk + word_bytes_end_chunk
+                    updated_word_bytes = (
+                        word_bytes_start_chunk
+                        + word_bytes_replacement_chunk
+                        + word_bytes_end_chunk
+                    )
 
                     word_bytes = updated_word_bytes
                 else:
@@ -198,7 +206,7 @@ class BPETokenizer():
                         # Merge the bytes
                         start_chunk = word_bytes[:i]
                         replacement_chunk = [merge_rule_pair_str]
-                        end_chunk = word_bytes[i + 2:]
+                        end_chunk = word_bytes[i + 2 :]
 
                         word_bytes = start_chunk + replacement_chunk + end_chunk
                     else:
@@ -219,7 +227,9 @@ class BPETokenizer():
         current_word = ""
 
         for token in encoded_sequence:
-            is_word_boundary_token = token == SYMBOL_END_OF_WORD or token.endswith(SYMBOL_END_OF_WORD)
+            is_word_boundary_token = token == SYMBOL_END_OF_WORD or token.endswith(
+                SYMBOL_END_OF_WORD
+            )
 
             if is_word_boundary_token:
                 # Append the word to the list of words if we've reached a word boundary

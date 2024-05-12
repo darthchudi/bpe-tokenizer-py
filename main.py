@@ -1,9 +1,12 @@
 from tokenizer import BPETokenizer
 
+
 def run():
     # Basic setup
     corpus = "This is an example that we will use to demonstrate BPE."
-    bpe_tokenizer = BPETokenizer(corpus=corpus, vocabulary_size=50, handle_unknown_characters=False, debug=False)
+    bpe_tokenizer = BPETokenizer(
+        corpus=corpus, vocabulary_size=50, handle_unknown_characters=False, debug=False
+    )
     print("Base Vocabulary:", bpe_tokenizer.vocabulary)
 
     # Simple sentence tokenization and decoding
