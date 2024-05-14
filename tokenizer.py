@@ -50,10 +50,6 @@ class BPETokenizer:
 
             word_lookup_table[word] = word_symbols
 
-            if debug:
-                print("Characters: ", word_characters)
-                print("Symbols: ", word_symbols)
-
         # Store the tokenizer state
         self.word_frequency = word_frequency
         self.vocabulary = vocabulary
@@ -61,52 +57,31 @@ class BPETokenizer:
         self.word_lookup_table = word_lookup_table
         self.handle_unknown_characters = handle_unknown_characters
 
-        if debug:
-            print("Base vocabulary size: ", len(vocabulary))
-            print("Before vocabulary: ", vocabulary)
-            print("Before: Word Lookup table: ", word_lookup_table)
-
         # Learn merge rules across the corpus
-        self.learn_merge_rules(vocabulary_size)
+        self.learn_merge_rules(vocabulary_size, debug=debug)
 
         # Initialise token indices
         self.token_indices = None
         self.reverse_token_indices = None
 
         # Assign an index to each token in the vocabulary
-        self.init_token_indices()
-
-        if debug:
-            print("After vocabulary size: ", len(vocabulary))
-            print("After vocabulary: ", vocabulary)
-            print("After: Word Lookup table: ", word_lookup_table)
-            print("Merges: ", self.merges)
-            print("Token Indices: ", self.token_indices)
-
-    def init_token_indices(self):
-        # Maps tokens in the vocabulary to a unique index
-        token_indices = collections.defaultdict(int)
-
-        # Maps a token index to a token
-        reverse_token_indices = collections.defaultdict(str)
-
-        # Assign a token index to each token in the vocabulary
-        for i, token in enumerate(self.vocabulary):
-            token_indices[token] = i
-            reverse_token_indices[i] = token
-
-        self.token_indices = token_indices
-        self.reverse_token_indices = reverse_token_indices
+        self.set_token_indices()
 
     # learn_merge_rules iteratively learns new merge rules over the corpus until
     # we get to the vocabulary size limit
-    def learn_merge_rules(self, vocabulary_size):
+    def learn_merge_rules(self, vocabulary_size, debug=False):
+        corpus_pair_stats = self.get_corpus_pair_stats()
+
         while len(self.vocabulary) < vocabulary_size:
             # Get the most frequent pair in the corpus
-            corpus_pair_stats = self.get_corpus_pair_stats()
             max_pair_in_corpus, max_pair_in_corpus_frequency = (
                 self.get_most_frequent_pair_in_corpus(corpus_pair_stats)
             )
+
+            if debug:
+                print(
+                    f"Vocabulary size: {len(self.vocabulary)}, max pair: {max_pair_in_corpus}, frequency: {max_pair_in_corpus_frequency}"
+                )
 
             # No more token pairs to be merged as we've exhausted all possible merge
             # rules in the corpus, so we stop training
@@ -120,11 +95,37 @@ class BPETokenizer:
 
             # Replace the the two individual bytes in each word's lookup table with
             # the max byte-pair token
-            self.merge_byte_pair_in_corpus(max_pair_in_corpus, max_pair_in_corpus_str)
+            corpus_pair_stats = self.merge_byte_pair_in_corpus(
+                max_pair_in_corpus, max_pair_in_corpus_str, corpus_pair_stats
+            )
+
+    def get_corpus_pair_stats(self):
+        pair_stats = collections.defaultdict(int)
+
+        for word, word_bytes in self.word_lookup_table.items():
+            # Count the frequency of each byte-pair in the word.
+            # We iterate up until the second to last byte as that's the start of the last byte-pair.
+            for i in range(len(word_bytes) - 1):
+                pair_stats[word_bytes[i], word_bytes[i + 1]] += 1
+
+        return pair_stats
+
+    def get_most_frequent_pair_in_corpus(self, corpus_pair_stats):
+        max_pair = None
+        max_frequency = 0
+
+        for pair, frequency in corpus_pair_stats.items():
+            if max_pair is None or frequency > max_frequency:
+                max_pair = pair
+                max_frequency = frequency
+
+        return max_pair, max_frequency
 
     # merge_byte_pair_in_corpus replaces the the two individual bytes in each word's lookup table with
     # the max byte-pair token
-    def merge_byte_pair_in_corpus(self, max_pair_in_corpus, max_pair_in_corpus_str):
+    def merge_byte_pair_in_corpus(
+        self, max_pair_in_corpus, max_pair_in_corpus_str, corpus_pair_stats
+    ):
         for word in self.word_lookup_table:
             word_bytes = self.word_lookup_table[word]
 
@@ -153,27 +154,59 @@ class BPETokenizer:
             # Update the stored word bytes
             self.word_lookup_table[word] = word_bytes
 
-    def get_corpus_pair_stats(self):
-        pair_stats = collections.defaultdict(int)
+            # Update the corpus pair stats for the merged byte-pair
+            corpus_pair_stats = self.update_corpus_pair_stats(
+                corpus_pair_stats,
+                max_pair_in_corpus,
+                max_pair_in_corpus_str,
+                word_bytes,
+            )
 
-        for word, word_bytes in self.word_lookup_table.items():
-            # Count the frequency of each byte-pair in the word.
-            # We iterate up until the second to last byte as that's the start of the last byte-pair.
-            for i in range(len(word_bytes) - 1):
-                pair_stats[word_bytes[i], word_bytes[i + 1]] += 1
+        return corpus_pair_stats
 
-        return pair_stats
+    def update_corpus_pair_stats(
+        self, corpus_pair_stats, max_pair_in_corpus, max_pair_in_corpus_str, word_bytes
+    ):
+        # Decrement the frequency of the individual byte-pair
+        corpus_pair_stats[max_pair_in_corpus] -= 1
 
-    def get_most_frequent_pair_in_corpus(self, corpus_pair_stats):
-        max_pair = None
-        max_frequency = 0
+        # Delete the byte-pair from the corpus pair stats if its frequency is 0
+        if corpus_pair_stats[max_pair_in_corpus] == 0:
+            del corpus_pair_stats[max_pair_in_corpus]
 
-        for pair, frequency in corpus_pair_stats.items():
-            if max_pair is None or frequency > max_frequency:
-                max_pair = pair
-                max_frequency = frequency
+        i = 0
+        while i < len(word_bytes) - 1:
+            is_merged_max_pair = word_bytes[i] == max_pair_in_corpus_str
+            if not is_merged_max_pair:
+                i += 1
+                continue
 
-        return max_pair, max_frequency
+            # Update the frequency of the merged byte-pair based on the neighbouring byte-pairs
+            if i > 0:
+                # Update the frequency of the byte-pair to the left of the merged byte-pair
+                corpus_pair_stats[word_bytes[i - 1], word_bytes[i]] += 1
+            elif i < len(word_bytes) - 1:
+                # Update the frequency of the byte-pair to the right of the merged byte-pair
+                corpus_pair_stats[word_bytes[i], word_bytes[i + 1]] += 1
+
+            i += 1
+
+        return corpus_pair_stats
+
+    def set_token_indices(self):
+        # Maps tokens in the vocabulary to a unique index
+        token_indices = collections.defaultdict(int)
+
+        # Maps a token index to a token
+        reverse_token_indices = collections.defaultdict(str)
+
+        # Assign a token index to each token in the vocabulary
+        for i, token in enumerate(self.vocabulary):
+            token_indices[token] = i
+            reverse_token_indices[i] = token
+
+        self.token_indices = token_indices
+        self.reverse_token_indices = reverse_token_indices
 
     def tokenise(self, input_sequence):
         tokens = []
