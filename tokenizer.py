@@ -9,7 +9,6 @@ class BPETokenizer:
     def __init__(
         self, corpus, vocabulary_size, handle_unknown_characters=False, debug=False
     ):
-        # Split the corpus into words
         words = corpus.split()
 
         # Stores how often a given word appears in the corpus
@@ -24,11 +23,9 @@ class BPETokenizer:
         # Maps words to the tokens used to tokenize the word
         word_lookup_table = collections.defaultdict(list)
 
-        # Add the special tokens to the vocabulary
         for token in special_tokens:
             vocabulary.add(token)
 
-        # Count how often each word occurs in the corupus
         for word in words:
             word_frequency[word] += 1
 
@@ -121,7 +118,7 @@ class BPETokenizer:
 
         return max_pair, max_frequency
 
-    # merge_byte_pair_in_corpus replaces the the two individual bytes in each word's lookup table with
+    # Replaces the the two individual bytes in each word's lookup table with
     # the max byte-pair token
     def merge_byte_pair_in_corpus(
         self, max_pair_in_corpus, max_pair_in_corpus_str, corpus_pair_stats
@@ -214,7 +211,6 @@ class BPETokenizer:
         # Split the input sequence into individual words
         words = input_sequence.split()
 
-        # Get the token for each word
         for word in words:
             # Split the word into individual characters, which represent the bytes
             word_bytes = [character for character in word]
@@ -248,7 +244,6 @@ class BPETokenizer:
             # Add the word bytes to the flattened list of tokens
             tokens.append(word_bytes)
 
-        # Flatten the list of token lists into a single list
         flatted_tokens = []
         for word_tokens in tokens:
             flatted_tokens += word_tokens
@@ -282,7 +277,6 @@ class BPETokenizer:
         return " ".join(words)
 
     def sanitise_word_boundary_tokens(self, words):
-        # Remove the end of word token from each word
         for i, word in enumerate(words):
             word = word.replace(SYMBOL_END_OF_WORD, "")
 
